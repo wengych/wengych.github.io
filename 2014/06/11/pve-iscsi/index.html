@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  <title>Proxmox PVE中配置iSCSI Target | Hexo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="Proxmox PVE提供了对NFS和iSCSI网络存储的支持，相对于基于文件系统的NFS，我更倾向于使用基于块设备的iSCSI做虚拟机镜像存储。
+我的部署环境中，iSCSI Target部署到了PVE集群中的一个节点上，这样这个节点既是虚拟化集群的物理主机，也是虚拟化集群中的存储服务器。
+
+Proxmox VE 3.1默认内核使用debian源安装iscsitarget-dkms内核模块会失败，">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Proxmox PVE中配置iSCSI Target">
+<meta property="og:url" content="http://wengych.com/2014/06/11/pve-iscsi/">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="Proxmox PVE提供了对NFS和iSCSI网络存储的支持，相对于基于文件系统的NFS，我更倾向于使用基于块设备的iSCSI做虚拟机镜像存储。
+我的部署环境中，iSCSI Target部署到了PVE集群中的一个节点上，这样这个节点既是虚拟化集群的物理主机，也是虚拟化集群中的存储服务器。
+
+Proxmox VE 3.1默认内核使用debian源安装iscsitarget-dkms内核模块会失败，">
+<meta property="og:image" content="../../../../images/pve-iscsi-storage.png">
+<meta property="og:image" content="../../../../images/pve-iscsi-add-iscsi-1.png">
+<meta property="og:image" content="../../../../images/pve-iscsi-add-iscsi-2.png">
+<meta property="og:image" content="../../../../images/pve-iscsi-create-lvm-1.png">
+<meta property="og:image" content="../../../../images/pve-iscsi-create-lvm-2.png">
+<meta property="og:image" content="../../../../images/pve-iscsi-create-vm.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Proxmox PVE中配置iSCSI Target">
+<meta name="twitter:description" content="Proxmox PVE提供了对NFS和iSCSI网络存储的支持，相对于基于文件系统的NFS，我更倾向于使用基于块设备的iSCSI做虚拟机镜像存储。
+我的部署环境中，iSCSI Target部署到了PVE集群中的一个节点上，这样这个节点既是虚拟化集群的物理主机，也是虚拟化集群中的存储服务器。
+
+Proxmox VE 3.1默认内核使用debian源安装iscsitarget-dkms内核模块会失败，">
+  
+    <link rel="alternative" href="/atom.xml" title="Hexo" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="/favicon.png">
+  
+  <link href="http://fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+  <link rel="stylesheet" href="/css/style.css" type="text/css">
+  <!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+  
+</head>
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">Hexo</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+          <a id="nav-rss-link" class="nav-icon" href="/atom.xml" title="RSS Feed"></a>
+        
+        <a id="nav-search-btn" class="nav-icon" title="Search"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" results="0" class="search-form-input" placeholder="Search"><input type="submit" value="&#xF002;" class="search-form-submit"><input type="hidden" name="q" value="site:http://wengych.com"></form>
+      </div>
+    </div>
+  </div>
+</header>
+      <div class="outer">
+        <section id="main"><article id="post-pve-iscsi" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2014/06/11/pve-iscsi/" class="article-date">
+  <time datetime="2014-06-11T03:31:41.000Z" itemprop="datePublished">Jun 11 2014</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      Proxmox PVE中配置iSCSI Target
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>Proxmox PVE提供了对NFS和iSCSI网络存储的支持，相对于基于文件系统的NFS，我更倾向于使用基于块设备的iSCSI做虚拟机镜像存储。</p>
+<p>我的部署环境中，iSCSI Target部署到了PVE集群中的一个节点上，这样这个节点既是虚拟化集群的物理主机，也是虚拟化集群中的存储服务器。</p>
+<p><img src="../../../../images/pve-iscsi-storage.png" alt="pve-iscsi-storage"></p>
+<p>Proxmox VE 3.1默认内核使用debian源安装iscsitarget-dkms内核模块会失败，参考Proxmox的官方论坛后得出以下解决办法<br>先执行安装</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre>1
+</pre></td><td class="code"><pre>apt-<span class="keyword">get</span> install iscsitarget
+</pre></td></tr></table></figure><br>配置Target: /etc/iet/ietd.conf<br><figure class="highlight"><table><tr><td class="gutter"><pre>1
+2
+</pre></td><td class="code"><pre>Target iqn<span class="number">.2014</span>-<span class="number">06.</span><span class="keyword">com</span><span class="preprocessor">.DOMAIN</span>-NAME<span class="preprocessor">.HOST</span>-NAME:target00
+        Lun <span class="number">1</span> Type=blockio,Path=/dev/BLOCK_DEVICE
+</pre></td></tr></table></figure><br>修改iscsitarget的默认配置: /etc/default/iscsitarget，ISCSITARGET_ENABLE变量改为TRUE<br><br>启动iSCSI服务<br><figure class="highlight"><table><tr><td class="gutter"><pre>1
+</pre></td><td class="code"><pre>/etc/init.d/iscsitarget <span class="operator"><span class="keyword">start</span></span>
+</pre></td></tr></table></figure>
+
+<p>在PVE集群中添加iSCSI设备<br><img src="../../../../images/pve-iscsi-add-iscsi-1.png" alt="add-iscsi-1"><br><img src="../../../../images/pve-iscsi-add-iscsi-2.png" alt="add-iscsi-2"></p>
+<p>基于iSCSI设备创建LVM组<br><img src="../../../../images/pve-iscsi-create-lvm-1.png" alt="craete-lvm-1"><br><img src="../../../../images/pve-iscsi-create-lvm-2.png" alt="craete-lvm-2"></p>
+<p>然后就可以将所有的虚机镜像都安装到iSCSI盘阵上了<br><img src="../../../../images/pve-iscsi-create-vm.png" alt="create-vm"></p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://wengych.com/2014/06/11/pve-iscsi/" data-id="kl7py55eor57789y" class="article-share-link">Share</a>
+      
+      
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/虚拟化/">虚拟化</a></li></ul>
+
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/2014/06/11/使用Approx搭建DebianUbuntu仓库代理/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          使用Approx搭建Debian/Ubuntu仓库代理
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2011/11/24/使用reprepro搭建Debian仓库/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">使用reprepro搭建Debian仓库</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tags</h3>
+    <div class="widget">
+      <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/虚拟化/">虚拟化</a><span class="tag-list-count">1</span></li></ul>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tag Cloud</h3>
+    <div class="widget tagcloud">
+      <a href="/tags/虚拟化/" style="font-size: NaNpx;">虚拟化</a>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2014/06">June 2014</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2011/11">November 2011</a><span class="archive-list-count">1</span></li></ul>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recents</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2014/06/11/使用Approx搭建DebianUbuntu仓库代理/">使用Approx搭建Debian/Ubuntu仓库代理</a>
+          </li>
+        
+          <li>
+            <a href="/2014/06/11/pve-iscsi/">Proxmox PVE中配置iSCSI Target</a>
+          </li>
+        
+          <li>
+            <a href="/2011/11/24/使用reprepro搭建Debian仓库/">使用reprepro搭建Debian仓库</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      &copy; 2014 Charles<br>
+      Powered by <a href="http://zespia.tw/hexo/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+
+
+<script type="text/javascript" src="/js/script.js"></script>
+  </div>
+</body>
+</html>
