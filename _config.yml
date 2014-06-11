@@ -6,13 +6,13 @@
 title: Hexo
 subtitle:
 description:
-author: John Doe
-email:
-language:
+author: Charles
+email: wengych@gmail.com
+language: cn
 
 # URL
 ## If your site is put in a subdirectory, set url as 'http://yoursite.com/child' and root as '/child/'
-url: http://yoursite.com
+url: http://wengych.com
 root: /
 permalink: :year/:month/:day/:title/
 tag_dir: tags
@@ -86,4 +86,6 @@ exclude_generator:
 # Deployment
 ## Docs: http://hexo.io/docs/deployment.html
 deploy:
-  type:
+  type: github
+  repo: https://github.com/wengych/wengych.github.io.git
+  branch: master
